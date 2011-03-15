@@ -1,0 +1,38 @@
+#!/bin/bash
+
+usage='USAGE: friendssh [-h|--help] [<USER>@]<HOST>'
+about='friendssh -- Add public key to an ssh host.'
+
+host=$1
+
+if [[ $host == '-h' ]]; then 
+    echo $about
+    echo $usage
+    exit 0
+elif [[ $host == '--help' ]]; then 
+    echo $about
+    echo $usage
+    exit 0
+fi
+
+if [[ -z $host ]]; then
+    echo $usage
+    exit 1
+fi
+clientname=`hostname`
+clientkey=`cat ~/.ssh/id_rsa.pub`
+hostkeydir='.ssh/clients'
+hostkeydest="$hostkeydir/id_rsa.pub-$clientname"
+hostkeyfile=".ssh/authorized_keys"
+
+ssh $host 'bash' <<EOS
+if [[ ! -d "$hostkeydir" ]]; then mkdir "$hostkeydir"; fi
+if [[ -e "$hostkeydest" ]]; then
+    echo 'Error: Remote file $hostkeydest exists.'; exit 1; fi
+
+echo Organizing remote key
+echo $clientkey > $hostkeydest
+echo Authorizing key
+cat $hostkeydest >> $hostkeyfile
+exit 0
+EOS
