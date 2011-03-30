@@ -1,25 +1,59 @@
 #!/bin/bash
 set -o pipefail
 function about {
-    echo 'friendssh - Easily add RSA public key authentication to ssh hosts.'
+    echo 'friendssh - Easily add RSA key authentication to ssh hosts.'
 }
 function usage {
-    echo 'USAGE: friendssh [-h|--help] [<USER>@]<HOST>'
+    echo 'USAGE:'
+    echo '    friendssh [-h] [-f] [-t KEYTYPE] [-p PASSPHRASE] [USER@]HOST'
 }
 function version {
-    echo 'friendssh v0.2'
+    echo 'friendssh v0.3'
 }
 function prog_help { echo; about; echo; usage; echo; }
+function error { echo -n "Error: $*" 1>&2;  }
+function warn { echo -n "Warning: $*" 1>&2;  }
 
-host=$1
+keytype=rsa
+passphrase=
+verbose=
+forcecopy=
+while getopts “ht:p:vVf” OPTION
+do
+    case $OPTION in
+        h)
+            prog_help
+            exit 0
+            ;;
+        t)
+            warn "The -t option is not yet implemented."
+            keytype=$OPTARG
+            ;;
+        p)
+            warn "The -p option is not yet implemented."
+            passphrase=$OPTARG
+            ;;
+        v)
+            verbose=1
+            ;;
+        f)
+            forcecopy=1
+            ;;
+        V)
+            version
+            exit 0
+            ;;
+        ?)
+            echo "Unrecognized option $OPTSTRING" 1>&2
+            usage 1>&2
+            exit 1
+            ;;
+    esac
+done
 
-if [[ $host == '-h' ]]; then 
-    prog_help
-    exit 0
-elif [[ $host == '--help' ]]; then 
-    prog_help
-    exit 0
-fi
+args=("$@")
+host_ind=`expr $OPTIND - 1`
+host=${args[$host_ind]}
 
 if [[ -z $host ]]; then
     usage 1>&2
@@ -27,12 +61,21 @@ if [[ -z $host ]]; then
 fi
 
 clientname=`hostname`
-ckeypath=~/.ssh/id_rsa.pub
-if [[ ! -e  "$ckeypath" ]]; then
-    echo Could not find RSA key.
-    ssh-keygen -t rsa -f "$ckeypath"
+pubkeypath=~/.ssh/id_rsa.pub
+privatekeypath=~/.ssh/id_rsa.pub
+if [[ ! -e  "$pubkeypath" ]]; then
+    if [ $verbose ]; then
+        echo "Could not find RSA public key '$pubkeypath'."
+    fi
+    if [[ -e "$privatekeypath" ]]; then
+        if [ $verbose ]; then
+            echo "But the private key '$privatekeypath' was found."
+        fi
+        error "Cannot procede without a public/private key pair."
+    fi
+    ssh-keygen -t rsa -f "$pubkeypath"
 fi
-clientkey=`cat ~/.ssh/id_rsa.pub`
+clientkey=`cat "$pubkeypath"`
 
 hostkeydir='.ssh/clients'
 hostkeydest="$hostkeydir/id_rsa.pub-$clientname"
@@ -44,6 +87,7 @@ function trygetyn {
     echo -n $YESORNO
     return 0
 }
+
 function confirm_overwrite {
 YN=`trygetyn | tr '[A-Z]' '[a-z]'`
 echo $YN
@@ -60,13 +104,23 @@ return 1
 
 function auth_script {
 cat << EOAUTH
-echo Organizing remote key
+if [[ ! -d "$hostkeydir" ]]; then
+    mkdir "$hostkeydir"
+fi
+
+if [ $verbose ]; then
+    echo Organizing remote key
+fi
 echo "$clientkey" > $hostkeydest
 
-echo Authorizing key
+if [ $verbose ]; then
+    echo Authorizing key
+fi
 cat "$hostkeydest" >> $hostkeyfile
 
-echo Disconnecting from remote host.
+if [ $verbose ]; then
+    echo Disconnecting from remote host.
+fi
 exit 0
 EOAUTH
 return 0
@@ -74,11 +128,11 @@ return 0
 
 function safe_auth_script {
 cat <<EOSAFETY
-if [[ ! -d "$hostkeydir" ]];
-    then mkdir "$hostkeydir";
+if [[ ! -d "$hostkeydir" ]]; then
+    mkdir "$hostkeydir"
 fi
 if [[ -e "$hostkeydest" ]]; then
-    echo 'Error: Remote file '$hostkeydest' exists.';
+    echo 'Error: Remote file '$hostkeydest' exists.' 1>&2;
     exit 2
 fi
 EOSAFETY
@@ -86,28 +140,42 @@ auth_script
 return 0
 }
 
-echo "Connecting to '$host'."
-safe_auth_script | ssh $host 'bash'
-copy_ok=$?
+if [ $verbose ]; then
+    echo "Connecting to '$host'."
+fi
+
+copy_ok=
+if [ $forcecopy ]; then
+    auth_script | ssh $host 'bash'
+    copy_ok=$?
+else
+    safe_auth_script | ssh $host 'bash'
+    copy_ok=$?
+fi
+
 if [[ $copy_ok -eq 2 ]]; then
     echo "Copy failed due to existing remote file '$hostkeydest'."
     should_overwrite=$(confirm_overwrite)
     if [[ ! $should_overwrite ]]; then
-        echo "Not overwriting. Nothing left to do."
+        if [ $verbose ]; then
+            echo "Not overwriting. Nothing left to do."
+        fi
         exit 1
     else 
         auth_script | ssh $host 'bash'
         copy_ok=$?
         if [ ! $copy_ok ]; then
-            echo Copy failed.
+            error "Failed to authenticate (probably)."
             exit 1
         fi
     fi
 elif [ ! $copy_ok ]; then
-    echo Copy failed
+    error "Failed to authenticate (probably)."
     exit 1
 fi
-echo Copy Succeded
 
-echo You should now be authenticated.
-echo Try connecting to $host with SSH.
+if [ $verbose ]; then
+    echo Copy Succeded
+    echo You should now be authenticated.
+    echo Try connecting to $host with SSH.
+fi
