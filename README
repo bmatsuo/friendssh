@@ -1,0 +1,22 @@
+
+friendssh - Easily add RSA key authentication to ssh hosts.
+
+USAGE: friendssh [-h|--help] [USER@]HOST
+
+DESCRIPTION:
+    The friendssh program performs all the necessary steps in setting up
+    RSA public/private key for your computer on a remote host. friendssh
+    will generate an RSA key pair if you do not already have one at
+    '~/.ssh/id_rsa' and '~/.ssh/id_rsa.pub'. It then copies your public
+    key to the remote host, organizes it, and adds it to the list of
+    authorized keys.
+
+ARGUMENTS
+    HOST is the address of a remote ssh server. USER is your account
+    username on HOST. USER defaults to the environment variable $USER
+    when not provided.
+
+FUTURE ADDITIONS:
+    Non-RSA key types.
+    Improved error handling 
+        (i.e. key is not host, but not in the authorized list).

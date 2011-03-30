@@ -1,38 +1,113 @@
 #!/bin/bash
-
-usage='USAGE: friendssh [-h|--help] [<USER>@]<HOST>'
-about='friendssh -- Add public key to an ssh host.'
+set -o pipefail
+function about {
+    echo 'friendssh - Easily add RSA public key authentication to ssh hosts.'
+}
+function usage {
+    echo 'USAGE: friendssh [-h|--help] [<USER>@]<HOST>'
+}
+function version {
+    echo 'friendssh v0.2'
+}
+function prog_help { echo; about; echo; usage; echo; }
 
 host=$1
 
 if [[ $host == '-h' ]]; then 
-    echo $about
-    echo $usage
+    prog_help
     exit 0
 elif [[ $host == '--help' ]]; then 
-    echo $about
-    echo $usage
+    prog_help
     exit 0
 fi
 
 if [[ -z $host ]]; then
-    echo $usage
+    usage 1>&2
     exit 1
 fi
+
 clientname=`hostname`
+ckeypath=~/.ssh/id_rsa.pub
+if [[ ! -e  "$ckeypath" ]]; then
+    echo Could not find RSA key.
+    ssh-keygen -t rsa -f "$ckeypath"
+fi
 clientkey=`cat ~/.ssh/id_rsa.pub`
+
 hostkeydir='.ssh/clients'
 hostkeydest="$hostkeydir/id_rsa.pub-$clientname"
 hostkeyfile=".ssh/authorized_keys"
 
-ssh $host 'bash' <<EOS
-if [[ ! -d "$hostkeydir" ]]; then mkdir "$hostkeydir"; fi
-if [[ -e "$hostkeydest" ]]; then
-    echo 'Error: Remote file $hostkeydest exists.'; exit 1; fi
+function trygetyn {
+    YESORNO=""
+    read -p "Overwrite? (yes/NO)" YESORNO
+    echo -n $YESORNO
+    return 0
+}
+function confirm_overwrite {
+YN=`trygetyn | tr '[A-Z]' '[a-z]'`
+echo $YN
+while [[ ! -z $YN && ! ( $YN != 'yes' || $YN != 'no' ) ]]; do
+    echo "I couldn't understand '$YN'." 1>&2
+    echo "Please enter 'yes', 'no', or leave blank." 1>&2
+    YN=`trygetyn | tr '[A-Z]' '[a-z]'`
+done
+if [[ $YN == 'yes' ]]; then
+    return 0
+fi
+return 1
+}
 
+function auth_script {
+cat << EOAUTH
 echo Organizing remote key
-echo $clientkey > $hostkeydest
+echo "$clientkey" > $hostkeydest
+
 echo Authorizing key
-cat $hostkeydest >> $hostkeyfile
+cat "$hostkeydest" >> $hostkeyfile
+
+echo Disconnecting from remote host.
 exit 0
-EOS
+EOAUTH
+return 0
+}
+
+function safe_auth_script {
+cat <<EOSAFETY
+if [[ ! -d "$hostkeydir" ]];
+    then mkdir "$hostkeydir";
+fi
+if [[ -e "$hostkeydest" ]]; then
+    echo 'Error: Remote file '$hostkeydest' exists.';
+    exit 2
+fi
+EOSAFETY
+auth_script
+return 0
+}
+
+echo "Connecting to '$host'."
+safe_auth_script | ssh $host 'bash'
+copy_ok=$?
+if [[ $copy_ok -eq 2 ]]; then
+    echo "Copy failed due to existing remote file '$hostkeydest'."
+    should_overwrite=$(confirm_overwrite)
+    if [[ ! $should_overwrite ]]; then
+        echo "Not overwriting. Nothing left to do."
+        exit 1
+    else 
+        auth_script | ssh $host 'bash'
+        copy_ok=$?
+        if [ ! $copy_ok ]; then
+            echo Copy failed.
+            exit 1
+        fi
+    fi
+elif [ ! $copy_ok ]; then
+    echo Copy failed
+    exit 1
+fi
+echo Copy Succeded
+
+echo You should now be authenticated.
+echo Try connecting to $host with SSH.
