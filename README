@@ -1,5 +1,13 @@
 friendssh - Add RSA key authentication to ssh hosts.
 
+SYNOPSIS:
+
+    $ friendssh bryan@remote.compute.cluster.net
+    Password:
+    $ ssh bryan@remote.compute.cluster.net
+    Welcome to your remote compute cluster!
+    > 
+
 USAGE:
     friendssh [-h] [-f] [-t KEYTYPE] [-p PASSPHRASE] [USER@]HOST
 
@@ -14,7 +22,6 @@ OPTIONS:
           Use a specified passphrase for any created key.
     -f    Force copying of the public key and athentication.
     -h    Print a help message.
-
 
 DESCRIPTION:
     The friendssh program performs all the necessary steps in setting up
