@@ -1,8 +1,19 @@
-
-friendssh - Easily add RSA key authentication to ssh hosts.
+friendssh - Add RSA key authentication to ssh hosts.
 
 USAGE:
     friendssh [-h] [-f] [-t KEYTYPE] [-p PASSPHRASE] [USER@]HOST
+
+ARGUMENTS:
+    HOST  Hostname or address of an ssh server.
+    USER  Username at the specified host.
+
+OPTIONS:
+    -t KEYTYPE
+          Use a key type other than 'rsa'.
+    -p PASSPHRASE
+          Use a specified passphrase for any created key.
+    -f    Force copying of the public key and athentication.
+    -h    Print a help message.
 
 
 DESCRIPTION:

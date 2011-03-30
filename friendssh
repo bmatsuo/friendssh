@@ -1,16 +1,33 @@
 #!/bin/bash
 set -o pipefail
 function about {
-    echo 'friendssh - Easily add RSA key authentication to ssh hosts.'
+    echo 'friendssh - Add RSA key authentication to ssh hosts.'
 }
 function usage {
-    echo 'USAGE:'
-    echo '    friendssh [-h] [-f] [-t KEYTYPE] [-p PASSPHRASE] [USER@]HOST'
+    echo "USAGE:"
+    echo "    friendssh [-h] [-f] [-t KEYTYPE] [-p PASSPHRASE] [USER@]HOST"
+}
+function full_usage {
+    about
+    echo
+    usage
+    echo
+    echo "ARGUMENTS:"
+    echo "    HOST  Hostname or address of an ssh server."
+    echo "    USER  Username at the specified host."
+    echo
+    echo "OPTIONS:"
+    echo "    -t KEYTYPE"
+    echo "          Use a key type other than 'rsa'."
+    echo "    -p PASSPHRASE"
+    echo "          Use a specified passphrase for any created key."
+    echo "    -f    Force copying of the public key and athentication."
+    echo "    -h    Print this message."
 }
 function version {
-    echo 'friendssh v0.3'
+    echo 'friendssh v0.3.5'
 }
-function prog_help { echo; about; echo; usage; echo; }
+function prog_help { full_usage; }
 function error { echo -n "Error: $*" 1>&2;  }
 function warn { echo -n "Warning: $*" 1>&2;  }
 
