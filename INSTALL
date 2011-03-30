@@ -1,5 +1,5 @@
 To install friendssh, use the command
 
-    ./install.sh PREFIX
+    ./install.sh [PREFIX]
 
 If a prefix is not given, '/usr/local' will be used.

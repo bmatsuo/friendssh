@@ -1,5 +1,26 @@
 #!/bin/bash
+# Filename: friendssh
+# Author:   Bryan Matsuo <bryan.matsuo@gmail.com>
+# Created:  Tue Mar 15 2011 
+#
+# This file is part of friendssh.
+#
+# friendssh is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# friendssh is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with friendssh.  If not, see <http://www.gnu.org/licenses/>.
+
 set -o pipefail
+
+function version { echo 'friendssh v0.3.8'; }
 function about {
     echo 'friendssh - Add RSA key authentication to ssh hosts.'
 }
@@ -8,10 +29,7 @@ function usage {
     echo "    friendssh [-h] [-f] [-t KEYTYPE] [-p PASSPHRASE] [USER@]HOST"
 }
 function full_usage {
-    about
-    echo
-    usage
-    echo
+    about; echo; usage; echo;
     echo "ARGUMENTS:"
     echo "    HOST  Hostname or address of an ssh server."
     echo "    USER  Username at the specified host."
@@ -23,9 +41,6 @@ function full_usage {
     echo "          Use a specified passphrase for any created key."
     echo "    -f    Force copying of the public key and athentication."
     echo "    -h    Print this message."
-}
-function version {
-    echo 'friendssh v0.3.5'
 }
 function prog_help { full_usage; }
 function error { echo -n "Error: $*" 1>&2;  }
